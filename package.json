@@ -1,0 +1,30 @@
+{
+  "name": "employee_tracker",
+  "version": "1.0.0",
+  "description": "constructs an interface for managing a company's employees using node, inquirer, and MySQL",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/simonanewton/week_12"
+  },
+  "keywords": [
+    "node",
+    "inquirer",
+    "MySQL"
+  ],
+  "author": "Simon Newton",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/simonanewton/week_12/issues"
+  },
+  "homepage": "https://github.com/simonanewton/week_12#readme",
+  "dependencies": {
+    "console.table": "^0.10.0",
+    "inquirer": "^7.1.0",
+    "mysql": "^2.18.1"
+  }
+}
