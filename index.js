@@ -21,15 +21,12 @@ connection.connect((err) => {
 });
 
 async function promptUser() {
-	
 	const answer = await inquirer.prompt({
 		"type": "list",
 		"name": "selection",
 		"message": "What would you like to do?",
 		"choices": [
 			"View All Employees",
-			"View All Employees by Department",
-			"View All Employees by Role",
 			"Add Employee",
 			"Exit Application"
 		]
@@ -38,12 +35,6 @@ async function promptUser() {
 	switch (answer.selection) {
 		case "View All Employees":
 			viewAllEmployees();
-			break;
-		case "View All Employees by Department":
-			viewAllDepartments();
-			break;
-		case "View All Employees by Role":
-			viewAllRoles();
 			break;
 		case "Add Employee":
 			addEmployee();
@@ -55,22 +46,52 @@ async function promptUser() {
 }
 
 function viewAllEmployees() {
-	console.log("Viewing All Employees...");
-	promptUser();
+	let query = "SELECT employee.id AS 'ID', employee.first_name AS 'First Name', employee.last_name AS 'Last Name', role.title AS 'Role', ";
+	query += "department.name AS 'Department', role.salary AS 'Salary', employee.manager_id AS 'Manager' ";
+	query += "FROM employee INNER JOIN role ON (role.id = employee.role_id) INNER JOIN department ON (department.id = role.department_id) ";
+	query += "ORDER BY employee.id, department.name, employee.first_name;"
+
+	connection.query(query, (err, res) => {
+		if (err) throw err;
+		console.log("\n" + cTable.getTable(res));
+		promptUser();
+	});
 }
 
-function viewAllDepartments() {
-	console.log("Viewing All Employees by Department...");
-	promptUser();
-}
+async function addEmployee() {
+	const employee = await inquirer.prompt([
+		{
+			"type": "input",
+			"name": "firstName",
+			"message": "What is the employee's first name?",
+			"validate": (answer) => answer.length > 0
+		},
+		{
+			"type": "input",
+			"name": "lastName",
+			"message": "What is the employee's last name?",
+			"validate": (answer) => answer.length > 0
+		},
+		{
+			"type": "list",
+			"name": "department",
+			"message": "What department is the employee in?",
+			"choices": ["Sales", "Engineering", "Finance", "Legal"]
+		},
+		{
+			"type": "list",
+			"name": "role",
+			"message": "What is the employee's role?",
+			"choices": ["Sales Lead", "Lead Engineer", "Accountant", "Lawyer"]
+		},
+		{
+			"type": "list",
+			"name": "manager",
+			"message": "Who is the employee's current manager?",
+			"choices": ["Rishahb", "Dany", "Darko", "Logan"]
+		}
+	]);
 
-function viewAllRoles() {
-	console.log("Viewing All Employees by Role...");
-	promptUser();
-}
-
-function addEmployee() {
-	console.log("Adding Employee...");
 	promptUser();
 }
 
