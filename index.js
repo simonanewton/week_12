@@ -76,23 +76,99 @@ async function addEmployee() {
 			"type": "list",
 			"name": "department",
 			"message": "What department is the employee in?",
-			"choices": ["Sales", "Engineering", "Finance", "Legal"]
+			"choices": await getDepartments()
 		},
 		{
 			"type": "list",
 			"name": "role",
 			"message": "What is the employee's role?",
-			"choices": ["Sales Lead", "Lead Engineer", "Accountant", "Lawyer"]
+			"choices": await getRoles()
 		},
 		{
 			"type": "list",
 			"name": "manager",
 			"message": "Who is the employee's current manager?",
-			"choices": ["Rishahb", "Dany", "Darko", "Logan"]
+			"choices": await getEmployees()
 		}
 	]);
 
-	promptUser();
+	let query = "INSERT INTO employee SET ?"
+	const values = [
+		{
+			first_name: employee.firstName,
+			last_name: employee.lastName,
+			role_id: await findRoleId(employee.role),
+			manager_id: await findManagerId(employee.manager)
+		}
+	]
+
+	connection.query(query, values, (err) => {
+		if (err) throw err;
+		viewAllEmployees();
+	});
+}
+
+function getDepartments() {
+	let query = "SELECT name FROM department ORDER BY id, name;";
+
+	return new Promise((resolve) => {
+		connection.query(query, (err, res) => {
+			if (err) throw err;
+			resolve(res.map(department => department.name));
+		});
+	});
+}
+
+function getRoles() {
+	let query = "SELECT title FROM role ORDER BY department_id, title;"
+
+	return new Promise((resolve) => {
+		connection.query(query, (err, res) => {
+			if (err) throw err;
+			resolve(res.map(role => role.title));
+		});
+	});
+}
+
+function getEmployees() {
+	let query = "SELECT first_name, last_name FROM employee ORDER BY id, first_name;";
+
+	return new Promise((resolve) => {
+		connection.query(query, (err, res) => {
+			if (err) throw err;
+			resolve(res.map(employee => employee.first_name + " " + employee.last_name));
+		});
+	});
+}
+
+function findRoleId(role) {
+	const query = "SELECT id FROM role WHERE title = ?";
+
+	return new Promise((resolve) => {
+		connection.query(query, [role], (err, res) => {
+			if (err) throw err;
+			resolve(res[0].id);
+		});
+	});
+}
+
+function findManagerId(manager) {
+	const query = "SELECT id FROM employee WHERE ?"
+	const values = [
+		{
+			first_name: manager.split(' ')[0]
+		},
+		{
+			last_name: manager.split(' ')[1]
+		}
+	];
+
+	return new Promise((resolve) => {
+		connection.query(query, values, (err, res) => {
+			if (err) throw err;
+			resolve(res[0].id);
+		});
+	});
 }
 
 function exitApplication() {
