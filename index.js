@@ -21,7 +21,7 @@ connection.connect((err) => {
 });
 
 async function promptUser() {
-	const answer = await inquirer.prompt({
+	const answers = await inquirer.prompt({
 		"type": "list",
 		"name": "selection",
 		"message": "What would you like to do?",
@@ -32,7 +32,7 @@ async function promptUser() {
 		]
 	});
 
-	switch (answer.selection) {
+	switch (answers.selection) {
 		case "View All Employees":
 			viewAllEmployees();
 			break;
@@ -46,10 +46,10 @@ async function promptUser() {
 }
 
 function viewAllEmployees() {
-	let query = "SELECT employee.id AS 'ID', employee.first_name AS 'First Name', employee.last_name AS 'Last Name', role.title AS 'Role', ";
-	query += "department.name AS 'Department', role.salary AS 'Salary', employee.manager_id AS 'Manager' ";
-	query += "FROM employee INNER JOIN role ON (role.id = employee.role_id) INNER JOIN department ON (department.id = role.department_id) ";
-	query += "ORDER BY employee.id, department.name, employee.first_name;"
+	let query = "SELECT worker.id AS 'ID', worker.first_name AS 'First Name', worker.last_name AS 'Last Name', role.title AS 'Role', department.name AS 'Department', ";
+	query += "FORMAT(role.salary, 0) AS 'Salary', CONCAT(manager.first_name, ' ', manager.last_name) AS 'Manager' FROM employee worker ";
+	query += "LEFT JOIN employee manager on (manager.id = worker.manager_id) INNER JOIN role ON (role.id = worker.role_id) ";
+	query += "INNER JOIN department ON (department.id = role.department_id);";
 
 	connection.query(query, (err, res) => {
 		if (err) throw err;
@@ -59,7 +59,7 @@ function viewAllEmployees() {
 }
 
 async function addEmployee() {
-	const employee = await inquirer.prompt([
+	const questionA = await inquirer.prompt([
 		{
 			"type": "input",
 			"name": "firstName",
@@ -78,11 +78,14 @@ async function addEmployee() {
 			"message": "What department is the employee in?",
 			"choices": await getDepartments()
 		},
+	]);
+
+	const questionB = await inquirer.prompt([
 		{
 			"type": "list",
 			"name": "role",
 			"message": "What is the employee's role?",
-			"choices": await getRoles()
+			"choices": await getRoles(questionA.department)
 		},
 		{
 			"type": "list",
@@ -92,7 +95,9 @@ async function addEmployee() {
 		}
 	]);
 
-	let query = "INSERT INTO employee SET ?"
+	const employee = {...questionA, ...questionB};
+
+	const query = "INSERT INTO employee SET ?"
 	const values = [
 		{
 			first_name: employee.firstName,
@@ -109,7 +114,7 @@ async function addEmployee() {
 }
 
 function getDepartments() {
-	let query = "SELECT name FROM department ORDER BY id, name;";
+	const query = "SELECT name FROM department ORDER BY id, name;";
 
 	return new Promise((resolve) => {
 		connection.query(query, (err, res) => {
@@ -119,11 +124,12 @@ function getDepartments() {
 	});
 }
 
-function getRoles() {
-	let query = "SELECT title FROM role ORDER BY department_id, title;"
+async function getRoles(department) {
+	const query = "SELECT title FROM role WHERE department_id = ? ORDER BY department_id, title;"
+	const values = await findDepartmentId(department);
 
 	return new Promise((resolve) => {
-		connection.query(query, (err, res) => {
+		connection.query(query, [values], (err, res) => {
 			if (err) throw err;
 			resolve(res.map(role => role.title));
 		});
@@ -131,12 +137,23 @@ function getRoles() {
 }
 
 function getEmployees() {
-	let query = "SELECT first_name, last_name FROM employee ORDER BY id, first_name;";
+	const query = "SELECT CONCAT(first_name, ' ', last_name) AS 'name' FROM employee ORDER BY id, first_name;";
 
 	return new Promise((resolve) => {
 		connection.query(query, (err, res) => {
 			if (err) throw err;
-			resolve(res.map(employee => employee.first_name + " " + employee.last_name));
+			resolve(res.map(employee => employee.name));
+		});
+	});
+}
+
+function findDepartmentId(department) {
+	const query = "SELECT id FROM department WHERE name = ?";
+
+	return new Promise((resolve) => {
+		connection.query(query, [department], (err, res) => {
+			if (err) throw err;
+			resolve(res[0].id);
 		});
 	});
 }
