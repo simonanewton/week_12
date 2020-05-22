@@ -27,7 +27,9 @@ async function promptUser() {
 		"message": "What would you like to do?",
 		"choices": [
 			"View All Employees",
+			"View Employees by Manager",
 			"Add Employee",
+			"Delete Employee",
 			"Update Employee Role",
 			"Exit Application"
 		]
@@ -37,8 +39,14 @@ async function promptUser() {
 		case "View All Employees":
 			viewAllEmployees();
 			break;
+		case "View Employees by Manager":
+			viewEmployeesbyManager();
+			break;
 		case "Add Employee":
 			addEmployee();
+			break;
+		case "Delete Employee":
+			deleteEmployee();
 			break;
 		case "Update Employee Role":
 			updateRole();
@@ -99,7 +107,7 @@ async function addEmployee() {
 		}
 	]);
 
-	const employee = {...answersA, ...answersB};
+	const employee = { ...answersA, ...answersB };
 
 	const query = "INSERT INTO employee SET ?"
 	const values = [
@@ -110,6 +118,32 @@ async function addEmployee() {
 			manager_id: await findManagerId(employee.manager)
 		}
 	]
+
+	connection.query(query, values, (err) => {
+		if (err) throw err;
+		viewAllEmployees();
+	});
+}
+
+async function deleteEmployee() {
+	const employee = await inquirer.prompt([
+		{
+			"type": "list",
+			"name": "name",
+			"message": "Which employee would you like to update?",
+			"choices": await getEmployees()
+		}
+	]);
+
+	const query = "DELETE FROM employee WHERE ? AND ?";
+	const values = [
+		{
+			first_name: employee.name.split(' ')[0]
+		},
+		{
+			last_name: employee.name.split(' ')[1]
+		}
+	];
 
 	connection.query(query, values, (err) => {
 		if (err) throw err;
