@@ -28,6 +28,7 @@ async function promptUser() {
 		"choices": [
 			"View All Employees",
 			"Add Employee",
+			"Update Employee Role",
 			"Exit Application"
 		]
 	});
@@ -38,6 +39,9 @@ async function promptUser() {
 			break;
 		case "Add Employee":
 			addEmployee();
+			break;
+		case "Update Employee Role":
+			updateRole();
 			break;
 		case "Exit Application":
 			exitApplication();
@@ -59,7 +63,7 @@ function viewAllEmployees() {
 }
 
 async function addEmployee() {
-	const questionA = await inquirer.prompt([
+	const answersA = await inquirer.prompt([
 		{
 			"type": "input",
 			"name": "firstName",
@@ -80,12 +84,12 @@ async function addEmployee() {
 		},
 	]);
 
-	const questionB = await inquirer.prompt([
+	const answersB = await inquirer.prompt([
 		{
 			"type": "list",
 			"name": "role",
 			"message": "What is the employee's role?",
-			"choices": await getRoles(questionA.department)
+			"choices": await getRoles(answersA.department)
 		},
 		{
 			"type": "list",
@@ -95,7 +99,7 @@ async function addEmployee() {
 		}
 	]);
 
-	const employee = {...questionA, ...questionB};
+	const employee = {...answersA, ...answersB};
 
 	const query = "INSERT INTO employee SET ?"
 	const values = [
@@ -106,6 +110,50 @@ async function addEmployee() {
 			manager_id: await findManagerId(employee.manager)
 		}
 	]
+
+	connection.query(query, values, (err) => {
+		if (err) throw err;
+		viewAllEmployees();
+	});
+}
+
+async function updateRole() {
+	const answersA = await inquirer.prompt([
+		{
+			"type": "list",
+			"name": "name",
+			"message": "Which employee would you like to update?",
+			"choices": await getEmployees()
+		},
+		{
+			"type": "list",
+			"name": "department",
+			"message": "What department will the employee be in?",
+			"choices": await getDepartments()
+		}
+	]);
+
+	const answersB = await inquirer.prompt([
+		{
+			"type": "list",
+			"name": "role",
+			"message": "What is the employee's role?",
+			"choices": await getRoles(answersA.department)
+		}
+	]);
+
+	const query = "UPDATE employee SET ? WHERE ? AND ?";
+	const values = [
+		{
+			role_id: await findRoleId(answersB.role)
+		},
+		{
+			first_name: answersA.name.split(' ')[0]
+		},
+		{
+			last_name: answersA.name.split(' ')[1]
+		}
+	];
 
 	connection.query(query, values, (err) => {
 		if (err) throw err;
@@ -170,7 +218,7 @@ function findRoleId(role) {
 }
 
 function findManagerId(manager) {
-	const query = "SELECT id FROM employee WHERE ?"
+	const query = "SELECT id FROM employee WHERE ? AND ?"
 	const values = [
 		{
 			first_name: manager.split(' ')[0]
