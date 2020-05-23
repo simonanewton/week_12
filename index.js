@@ -27,7 +27,9 @@ async function promptUser() {
 		"message": "What would you like to do?",
 		"choices": [
 			"View All Employees",
-			"View Employees by Manager",
+			"View All Employees by Manager",
+			"Add Department",
+			"Add Role",
 			"Add Employee",
 			"Delete Employee",
 			"Update Employee Role",
@@ -39,8 +41,14 @@ async function promptUser() {
 		case "View All Employees":
 			viewAllEmployees();
 			break;
-		case "View Employees by Manager":
+		case "View All Employees by Manager":
 			viewEmployeesbyManager();
+			break;
+		case "Add Department":
+			addDepartment();
+			break;
+		case "Add Role":
+			addRole();
 			break;
 		case "Add Employee":
 			addEmployee();
@@ -70,8 +78,29 @@ function viewAllEmployees() {
 	});
 }
 
+async function viewEmployeesbyManager() {
+	let query = "SELECT worker.id AS 'ID', worker.first_name AS 'First Name', worker.last_name AS 'Last Name', role.title AS 'Role', department.name AS 'Department', ";
+	query += "FORMAT(role.salary, 0) AS 'Salary', CONCAT(manager.first_name, ' ', manager.last_name) AS 'Manager' FROM employee worker ";
+	query += "LEFT JOIN employee manager on (manager.id = worker.manager_id) INNER JOIN role ON (role.id = worker.role_id) ";
+	query += "INNER JOIN department ON (department.id = role.department_id) ORDER BY manager.first_name, manager.last_name;";
+
+	connection.query(query, (err, res) => {
+		if (err) throw err;
+		console.log("\n" + cTable.getTable(res));
+		promptUser();
+	});
+}
+
+async function addDepartment() {
+
+}
+
+async function addRole() {
+
+}
+
 async function addEmployee() {
-	const answersA = await inquirer.prompt([
+	let employee = await inquirer.prompt([
 		{
 			"type": "input",
 			"name": "firstName",
@@ -91,13 +120,13 @@ async function addEmployee() {
 			"choices": await getDepartments()
 		},
 	]);
-
-	const answersB = await inquirer.prompt([
+	
+	employee = Object.assign(employee, await inquirer.prompt([
 		{
 			"type": "list",
 			"name": "role",
 			"message": "What is the employee's role?",
-			"choices": await getRoles(answersA.department)
+			"choices": await getRoles(employee.department)
 		},
 		{
 			"type": "list",
@@ -105,9 +134,7 @@ async function addEmployee() {
 			"message": "Who is the employee's current manager?",
 			"choices": await getEmployees()
 		}
-	]);
-
-	const employee = { ...answersA, ...answersB };
+	]));
 
 	const query = "INSERT INTO employee SET ?"
 	const values = [
