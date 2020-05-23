@@ -21,7 +21,7 @@ connection.connect((err) => {
 });
 
 async function promptUser() {
-	const answers = await inquirer.prompt({
+	const answer = await inquirer.prompt({
 		"type": "list",
 		"name": "selection",
 		"message": "What would you like to do?",
@@ -37,7 +37,7 @@ async function promptUser() {
 		]
 	});
 
-	switch (answers.selection) {
+	switch (answer.selection) {
 		case "View All Employees":
 			viewAllEmployees();
 			break;
@@ -92,11 +92,61 @@ async function viewEmployeesbyManager() {
 }
 
 async function addDepartment() {
+	const answer = await inquirer.prompt([
+		{
+			"type": "input",
+			"name": "department",
+			"message": "What department you would like to add?",
+			"validate": (answer) => answer.length > 0
+		}
+	]);
 
+	const query = "INSERT INTO department SET name = ?";
+	const values = [answer.department];
+
+	connection.query(query, values, (err) => {
+		if (err) throw err;
+		console.log("Successfuly added department!");
+		promptUser();
+	});
 }
 
 async function addRole() {
+	const answer = await inquirer.prompt([
+		{
+			"type": "list",
+			"name": "department",
+			"message": "What department you would like to add to?",
+			"choices": await getDepartments()
+		},
+		{
+			"type": "input",
+			"name": "role",
+			"message": "What role would you like to add?",
+			"validate": (answer) => answer.length > 0
+		},
+		{
+			"type": "input",
+			"name": "salary",
+			"message": "What is the starting salary?",
+			"validate": (answer) => answer.length > 0
+		}
+	]);
 
+	const query = "INSERT INTO role SET ?";
+	const values = [
+		{
+			title: answer.role,
+			salary: answer.salary,
+			department_id: await findDepartmentId(answer.department)
+		}
+	];
+
+	connection.query(query, values, (err) => {
+		if (err) throw err;
+		console.log("Successfuly added role!");
+		promptUser();
+	});
 }
 
 async function addEmployee() {
@@ -179,7 +229,7 @@ async function deleteEmployee() {
 }
 
 async function updateRole() {
-	const answersA = await inquirer.prompt([
+	let employee = await inquirer.prompt([
 		{
 			"type": "list",
 			"name": "name",
@@ -194,25 +244,25 @@ async function updateRole() {
 		}
 	]);
 
-	const answersB = await inquirer.prompt([
+	employee = Object.assign(employee, await inquirer.prompt([
 		{
 			"type": "list",
 			"name": "role",
 			"message": "What is the employee's role?",
-			"choices": await getRoles(answersA.department)
+			"choices": await getRoles(employee.department)
 		}
-	]);
+	]));
 
 	const query = "UPDATE employee SET ? WHERE ? AND ?";
 	const values = [
 		{
-			role_id: await findRoleId(answersB.role)
+			role_id: await findRoleId(employee.role)
 		},
 		{
-			first_name: answersA.name.split(' ')[0]
+			first_name: employee.name.split(' ')[0]
 		},
 		{
-			last_name: answersA.name.split(' ')[1]
+			last_name: employee.name.split(' ')[1]
 		}
 	];
 
@@ -235,10 +285,10 @@ function getDepartments() {
 
 async function getRoles(department) {
 	const query = "SELECT title FROM role WHERE department_id = ? ORDER BY department_id, title;"
-	const values = await findDepartmentId(department);
+	const values = [await findDepartmentId(department)];
 
 	return new Promise((resolve) => {
-		connection.query(query, [values], (err, res) => {
+		connection.query(query, values, (err, res) => {
 			if (err) throw err;
 			resolve(res.map(role => role.title));
 		});
@@ -258,9 +308,10 @@ function getEmployees() {
 
 function findDepartmentId(department) {
 	const query = "SELECT id FROM department WHERE name = ?";
+	const values = [department];
 
 	return new Promise((resolve) => {
-		connection.query(query, [department], (err, res) => {
+		connection.query(query, values, (err, res) => {
 			if (err) throw err;
 			resolve(res[0].id);
 		});
@@ -269,9 +320,10 @@ function findDepartmentId(department) {
 
 function findRoleId(role) {
 	const query = "SELECT id FROM role WHERE title = ?";
+	const values = [role];
 
 	return new Promise((resolve) => {
-		connection.query(query, [role], (err, res) => {
+		connection.query(query, values, (err, res) => {
 			if (err) throw err;
 			resolve(res[0].id);
 		});
